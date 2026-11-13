@@ -1,0 +1,204 @@
+<title>Fridge Expiry Manager</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600&family=Noto+Sans+Thai:wght@400;500;700&display=swap">
+<style>
+/* Layout: one centred column. Header with language switch, summary tiles, add-form, recipe hint, filter chips, then the list sorted by days left. */
+:root{
+  --bg:#edf3f4; --surface:#ffffff; --ink:#13282c; --muted:#58707a; --line:#d3e0e3; --accent:#0e7685; --accent-ink:#ffffff;
+  --red-bg:#fde8e6; --red-fg:#b42318;
+  --yel-bg:#fff3cd; --yel-fg:#7a5200;
+  --grn-bg:#dff5e6; --grn-fg:#1c6b39;
+  --f-head:'Kanit','Noto Sans Thai',system-ui,sans-serif; --f-body:'Noto Sans Thai',system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0d1a1d; --surface:#15272b; --ink:#e4f0f2; --muted:#8fa8ae; --line:#264045; --accent:#4cc3d2; --accent-ink:#06191d;
+  --red-bg:#3b1a17; --red-fg:#ff9b92;
+  --yel-bg:#3a2e0a; --yel-fg:#ffd966;
+  --grn-bg:#12301d; --grn-fg:#7fd9a1; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d1a1d; --surface:#15272b; --ink:#e4f0f2; --muted:#8fa8ae; --line:#264045; --accent:#4cc3d2; --accent-ink:#06191d;
+  --red-bg:#3b1a17; --red-fg:#ff9b92;
+  --yel-bg:#3a2e0a; --yel-fg:#ffd966;
+  --grn-bg:#12301d; --grn-fg:#7fd9a1; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;
+  padding-block:24px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+main{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+header{display:flex;gap:12px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap}
+h1{font:600 1.7rem/1.2 var(--f-head);margin:0;text-wrap:balance}
+.sub{color:var(--muted);margin:2px 0 0}
+.seg{display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;border-radius:0;padding:6px 14px;font-size:.85rem;font-weight:700;background:transparent}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.tile{border-radius:10px;padding:10px 14px;min-width:0}
+.tile b{display:block;font:600 1.9rem/1.1 var(--f-head);font-variant-numeric:tabular-nums}
+.tile span{font-size:.85rem}
+.t-red{background:var(--red-bg);color:var(--red-fg)} .t-yel{background:var(--yel-bg);color:var(--yel-fg)} .t-grn{background:var(--grn-bg);color:var(--grn-fg)}
+.t-plain{background:var(--surface);border:1px solid var(--line);color:var(--ink)}
+form{display:grid;grid-template-columns:2fr 1.4fr 1.2fr auto;gap:10px;align-items:end}
+label{display:flex;flex-direction:column;gap:4px;font-size:.82rem;color:var(--muted);min-width:0}
+input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 10px;min-width:0;width:100%}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:9px 14px}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700}
+button:hover{filter:brightness(.96)}
+@media (max-width:640px){form{grid-template-columns:1fr 1fr}form label:first-child,form button{grid-column:1/-1}}
+.hint{background:var(--grn-bg);color:var(--grn-fg);border-radius:10px;padding:10px 14px}
+.demo{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;font-size:.88rem;color:var(--muted);border:1px dashed var(--line);border-radius:10px;padding:8px 12px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chips button{border-radius:999px;padding:5px 14px;font-size:.88rem}
+.chips button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+li{display:grid;grid-template-columns:76px 1fr auto;gap:14px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 14px 10px 10px}
+.days{border-radius:8px;text-align:center;padding:8px 4px;font-variant-numeric:tabular-nums}
+.days b{display:block;font:600 1.6rem/1 var(--f-head)} .days small{font-size:.72rem}
+.red{background:var(--red-bg);color:var(--red-fg)} .yel{background:var(--yel-bg);color:var(--yel-fg)} .grn{background:var(--grn-bg);color:var(--grn-fg)}
+.name{font-weight:700;overflow-wrap:anywhere} .meta{color:var(--muted);font-size:.85rem}
+.warn{color:var(--red-fg);font-weight:700;font-size:.85rem}
+.acts{display:flex;gap:6px}
+.acts button{padding:7px 10px;font-size:.85rem;white-space:nowrap}
+@media (max-width:560px){li{grid-template-columns:64px 1fr}.acts{grid-column:1/-1}.acts button{flex:1}}
+.empty{text-align:center;color:var(--muted);padding:28px 12px;display:block}
+@media (prefers-reduced-motion:no-preference){li{transition:transform .15s}li:hover{transform:translateY(-1px)}}
+</style>
+
+<main>
+  <header>
+    <div>
+      <h1>🧊 Fridge Expiry Manager</h1>
+      <p class="sub" id="today"></p>
+    </div>
+    <div class="seg" role="group" aria-label="Language">
+      <button type="button" data-lang="th" aria-pressed="true">ไทย</button>
+      <button type="button" data-lang="en" aria-pressed="false">EN</button>
+    </div>
+  </header>
+
+  <section class="tiles" id="tiles"></section>
+
+  <form class="panel" id="f">
+    <label><span data-t="name"></span><input id="name" data-tp="namePh" required></label>
+    <label><span data-t="cat"></span><select id="cat"></select></label>
+    <label><span data-t="exp"></span><input id="exp" type="date" required></label>
+    <button class="primary" type="submit" data-t="add"></button>
+  </form>
+
+  <div class="demo" id="demo" hidden><span data-t="demo"></span><button id="clear" type="button" data-t="clear"></button></div>
+  <div id="hints"></div>
+  <div class="chips" id="chips"></div>
+  <ul id="list"></ul>
+</main>
+
+<script>
+const L={
+ th:{tag:"กินให้ทัน อย่าให้เหลือทิ้ง",name:"ชื่อของ",namePh:"เช่น นมสด, ไข่ไก่, พาราเซตามอล",cat:"หมวดหมู่",exp:"วันหมดอายุ",add:"+ เพิ่ม",
+  demo:"ข้อมูลตัวอย่างสำหรับลองใช้ ลบทิ้งแล้วใส่ของจริงของคุณได้เลย",clear:"ล้างตัวอย่าง",
+  red:"🔴 รีบกินด่วน",yel:"🟡 ใกล้หมดอายุ",grn:"🟢 ปลอดภัย",eaten:"✅ กินทันแล้ว",wasted:"🗑️ ทิ้งไป",
+  all:"ทั้งหมด",fRed:"🔴 แดง",fYel:"🟡 เหลือง",fGrn:"🟢 เขียว",eat:"✅ กินแล้ว",bin:"🗑️ ทิ้งแล้ว",
+  empty:"ไม่มีรายการในหมวดนี้ เพิ่มของจากฟอร์มด้านบนได้เลย",warn:"⚠️ ยาหมดอายุ ห้ามรับประทาน",
+  ago:"วันที่แล้ว",today:"วันนี้",left:"วันเหลือ",left1:"วันเหลือ",expOn:"หมดอายุ",idea:"ไอเดียเมนู",soon:n=>`${n} ใกล้หมดอายุ ลองทำ`,loc:"th-TH"},
+ en:{tag:"Eat it before you have to bin it",name:"Item name",namePh:"e.g. milk, eggs, paracetamol",cat:"Category",exp:"Expiry date",add:"+ Add",
+  demo:"Sample data to try out. Clear it and add your own items.",clear:"Clear samples",
+  red:"🔴 Eat now",yel:"🟡 Expiring soon",grn:"🟢 Safe",eaten:"✅ Eaten in time",wasted:"🗑️ Thrown away",
+  all:"All",fRed:"🔴 Red",fYel:"🟡 Yellow",fGrn:"🟢 Green",eat:"✅ Eaten",bin:"🗑️ Thrown away",
+  empty:"Nothing in this group. Add items with the form above.",warn:"⚠️ Expired medicine. Do not take.",
+  ago:"days ago",today:"today",left:"days left",left1:"day left",expOn:"Expires",idea:"Meal idea",soon:n=>`${n} expires soon. Try`,loc:"en-GB"}
+};
+const CATS={"นม/ผลิตภัณฑ์นม":["🥛","Dairy"],"ผัก":["🥦","Vegetables"],"ผลไม้":["🍎","Fruit"],"เนื้อสัตว์":["🥩","Meat"],"ไข่":["🥚","Eggs"],"ขนมปัง/เบเกอรี่":["🍞","Bread & bakery"],"อาหารปรุงสำเร็จ":["🍱","Cooked food"],"เครื่องดื่ม":["🧃","Drinks"],"ยา":["💊","Medicine"],"อื่น ๆ":["📦","Other"]};
+// each combo: two groups of keywords (Thai or English); a group matches if any word appears
+const COMBOS=[
+ [["ไข่","egg"],["ขนมปัง","bread"],{th:"เฟรนช์โทสต์ไข่ดาว",en:"French toast with a fried egg"}],
+ [["ไข่","egg"],["ผัก","veg","lettuce","spinach"],{th:"ไข่เจียวผักรวม",en:"Veggie omelette"}],
+ [["นม","milk"],["ขนมปัง","bread"],{th:"ขนมปังนมสดปิ้ง",en:"Milk toast"}],
+ [["นม","milk"],["ผลไม้","fruit","apple","banana"],{th:"สมูทตี้ผลไม้นมสด",en:"Fruit and milk smoothie"}],
+ [["ไก่","chicken"],["ผัก","veg","lettuce","spinach"],{th:"ต้มจืดไก่ผักรวม",en:"Chicken and vegetable soup"}],
+ [["หมู","pork"],["ผัก","veg","lettuce","spinach"],{th:"ผัดผักรวมหมู",en:"Pork and vegetable stir-fry"}],
+ [["เนื้อ","beef"],["ผัก","veg","lettuce","spinach"],{th:"ผัดผักเนื้อสไลซ์",en:"Beef and vegetable stir-fry"}],
+ [["ไข่","egg"],["ข้าว","rice"],{th:"ข้าวผัดไข่",en:"Egg fried rice"}]];
+const BY_CAT={"นม/ผลิตภัณฑ์นม":[{th:"พุดดิ้งนม",en:"Milk pudding"},{th:"ชานมเย็น",en:"Iced milk tea"}],
+ "ผัก":[{th:"ผัดผักรวม",en:"Mixed vegetable stir-fry"},{th:"ต้มจืดผัก",en:"Clear vegetable soup"},{th:"สลัดผักสด",en:"Fresh salad"}],
+ "ผลไม้":[{th:"สมูทตี้ผลไม้",en:"Fruit smoothie"},{th:"โยเกิร์ตผลไม้รวม",en:"Fruit yogurt bowl"}],
+ "เนื้อสัตว์":[{th:"ผัดกะเพรา",en:"Basil stir-fry"},{th:"ต้มจืดเนื้อ",en:"Meat and tofu soup"}],
+ "ไข่":[{th:"ไข่เจียว",en:"Omelette"},{th:"ไข่ตุ๋น",en:"Steamed egg"}],
+ "ขนมปัง/เบเกอรี่":[{th:"ขนมปังปิ้งเนยน้ำตาล",en:"Sugar butter toast"},{th:"แซนด์วิชทูน่า",en:"Tuna sandwich"}],
+ "อาหารปรุงสำเร็จ":[{th:"อุ่นกินเป็นมื้อถัดไป",en:"Reheat for your next meal"},{th:"ข้าวผัดเศษอาหาร",en:"Leftover fried rice"}]};
+const KEY="fridge-v1", LKEY="fridge-lang";
+const $=id=>document.getElementById(id);
+const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const midnight=()=>{const d=new Date();return new Date(d.getFullYear(),d.getMonth(),d.getDate())};
+const addDays=n=>{const d=midnight();d.setDate(d.getDate()+n);return iso(d)};
+const daysLeft=s=>{const [y,m,d]=s.split("-").map(Number);return Math.round((new Date(y,m-1,d)-midnight())/864e5)};
+const status=n=>n<3?"red":n<=7?"yel":"grn";
+const esc=s=>s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+let lang="th";
+try{const l=localStorage.getItem(LKEY);lang=l||((navigator.language||"").startsWith("th")?"th":"en")}catch(e){}
+let S={items:[],eaten:0,wasted:0,demo:false}, filter="all";
+try{const r=JSON.parse(localStorage.getItem(KEY));if(r&&Array.isArray(r.items))S=r;else throw 0}catch(e){
+  S.demo=true;S.items=[["นมสดพาสเจอไรซ์","Fresh milk","นม/ผลิตภัณฑ์นม",1],["ไข่ไก่","Eggs","ไข่",2],["ขนมปังโฮลวีท","Wholemeal bread","ขนมปัง/เบเกอรี่",2],["อกไก่","Chicken breast","เนื้อสัตว์",4],["ผักกาดหอม","Lettuce","ผัก",6],["ยาแก้ไอ","Cough syrup","ยา",-3],["โยเกิร์ต","Yogurt","นม/ผลิตภัณฑ์นม",12],["แอปเปิล","Apples","ผลไม้",20]]
+   .map(([name,en,cat,o],i)=>({id:"s"+i,name,en,cat,exp:addDays(o)}))}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+const nm=i=>lang==="en"&&i.en?i.en:i.name;
+const catLabel=k=>{const c=CATS[k];return c?c[0]+" "+(lang==="en"?c[1]:k):"📦 "+k};
+
+function hints(urgent){
+  const t=L[lang], text=urgent.map(i=>(i.name+" "+(i.en||"")+" "+i.cat).toLowerCase()).join(" "), out=[];
+  COMBOS.forEach(([a,b,m])=>{if([a,b].every(g=>g.some(w=>text.includes(w))))out.push(`💡 ${t.idea}: ${m[lang]}`)});
+  if(!out.length)urgent.slice(0,2).forEach(i=>{const o=BY_CAT[i.cat];if(o)out.push(`💡 ${esc(nm(i))} ${lang==="en"?"expires soon. Try":"ใกล้หมดอายุ ลองทำ"}: ${o[i.name.length%o.length][lang]}`)});
+  return out.slice(0,3);
+}
+
+function render(){
+  const t=L[lang];
+  const rows=S.items.map(i=>({...i,n:daysLeft(i.exp)})).sort((a,b)=>a.n-b.n||nm(a).localeCompare(nm(b),lang));
+  const c={red:0,yel:0,grn:0};rows.forEach(r=>c[status(r.n)]++);
+  $("tiles").innerHTML=
+    `<div class="tile t-red"><b>${c.red}</b><span>${t.red}</span></div>
+     <div class="tile t-yel"><b>${c.yel}</b><span>${t.yel}</span></div>
+     <div class="tile t-grn"><b>${c.grn}</b><span>${t.grn}</span></div>
+     <div class="tile t-plain"><b>${S.eaten}</b><span>${t.eaten}</span></div>
+     <div class="tile t-plain"><b>${S.wasted}</b><span>${t.wasted}</span></div>`;
+  $("demo").hidden=!S.demo;
+  $("hints").innerHTML=hints(rows.filter(r=>status(r.n)!=="grn"&&r.cat!=="ยา")).map(h=>`<div class="hint">${h}</div>`).join("");
+  $("chips").innerHTML=[["all",t.all],["red",t.fRed],["yel",t.fYel],["grn",t.fGrn]]
+    .map(([k,x])=>`<button data-f="${k}" aria-pressed="${filter===k}">${x}</button>`).join("");
+  const view=rows.filter(r=>filter==="all"||status(r.n)===filter);
+  $("list").innerHTML=view.length?view.map(r=>{
+    const st=status(r.n), unit=r.n<0?t.ago:r.n===0?t.today:r.n===1?t.left1:t.left;
+    const warn=r.cat==="ยา"&&r.n<0?`<div class="warn">${t.warn}</div>`:"";
+    return `<li><div class="days ${st}"><b>${Math.abs(r.n)}</b><small>${unit}</small></div>
+      <div><div class="name">${(CATS[r.cat]||["📦"])[0]} ${esc(nm(r))}</div>
+      <div class="meta">${catLabel(r.cat).slice(3)} · ${t.expOn} ${r.exp.split("-").reverse().join("/")}</div>${warn}</div>
+      <div class="acts"><button data-eat="${r.id}">${t.eat}</button><button data-bin="${r.id}">${t.bin}</button></div></li>`}).join("")
+    :`<li class="empty">${t.empty}</li>`;
+}
+
+function applyLang(){
+  const t=L[lang], sel=$("cat").value;
+  document.documentElement.lang=lang;
+  document.querySelectorAll("[data-t]").forEach(e=>e.textContent=t[e.dataset.t]);
+  document.querySelectorAll("[data-tp]").forEach(e=>e.placeholder=t[e.dataset.tp]);
+  $("cat").innerHTML=Object.keys(CATS).map(k=>`<option value="${k}">${catLabel(k)}</option>`).join("");
+  if(sel)$("cat").value=sel;
+  $("today").textContent=midnight().toLocaleDateString(t.loc,{dateStyle:"full"})+" · "+t.tag;
+  document.querySelectorAll("[data-lang]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.lang===lang));
+  render();
+}
+
+$("exp").value=addDays(7);
+$("f").addEventListener("submit",e=>{e.preventDefault();
+  const name=$("name").value.trim();if(!name)return;
+  S.items.push({id:"u"+Date.now(),name,cat:$("cat").value,exp:$("exp").value});
+  $("name").value="";save();render();$("name").focus()});
+$("clear").onclick=()=>{S.items=[];S.demo=false;save();render()};
+document.addEventListener("click",e=>{
+  const t=e.target.closest("button");if(!t)return;
+  if(t.dataset.lang){lang=t.dataset.lang;try{localStorage.setItem(LKEY,lang)}catch(x){}return applyLang()}
+  if(t.dataset.f){filter=t.dataset.f;return render()}
+  const id=t.dataset.eat||t.dataset.bin;if(!id)return;
+  S.items=S.items.filter(i=>i.id!==id);
+  t.dataset.eat?S.eaten++:S.wasted++;save();render()});
+applyLang();
+</script>
