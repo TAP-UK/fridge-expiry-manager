@@ -3,7 +3,7 @@
 แดชบอร์ดบอกว่าของในตู้เย็นชิ้นไหนใกล้หมดอายุ เพื่อให้กินทันก่อนต้องทิ้ง
 A small web dashboard that shows which food and medicine in your fridge is about to expire, so you use it before you have to throw it away.
 
-**Live demo:** https://YOUR-USERNAME.github.io/YOUR-REPO/  <!-- แก้เป็นลิงก์ GitHub Pages ของคุณ / replace with your GitHub Pages link -->
+**Live demo:** https://tap-uk.github.io/fridge-expiry-manager/
 
 ## ปัญหาที่แก้ / The problem
 
